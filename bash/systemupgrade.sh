@@ -38,56 +38,54 @@ else
     exit 1
 fi
 
-# Update Step 2 in systemupgrade.sh
+# ---------------------------------------------------------
+# Step 2: Update DEB Packages
+# ---------------------------------------------------------
 log_info "[2/5] Upgrading installed DEB packages..."
-if ! apt-get upgrade --with-new-pkgs -y; then
-    log_error "DEB package upgrades encountered errors."
-    FAILED_STEPS+=("DEB Package Upgrades")
-else
-    log_success "DEB packages upgraded."
-fi
-
-if command -v snap &> /dev/null; then
-    log_info "Refreshing Snap packages..."
-    if ! snap refresh; then
-        log_error "Snap package refresh encountered errors."
-        FAILED_STEPS+=("Snap Package Refresh")
+echo -e "\n${GREEN}${BOLD}NOTIFICATION:${NC} Please confirm to proceed with DEB package upgrades (y/N)? "
+read -p "Do you want to proceed? " PROMPT_RESPONSE
+if [[ $PROMPT_RESPONSE =~ ^[Yy]$ ]]; then
+    log_info "Executing DEB package upgrades..."
+    if ! apt-get upgrade --with-new-pkgs -y; then
+        log_error "DEB package upgrades encountered errors."
+        FAILED_STEPS+=("DEB Package Upgrades")
     else
-        log_success "Snap packages refreshed."
+        log_success "DEB packages upgraded."
     fi
 else
-    log_warn "Snap is not installed. Skipping..."
+    log_warn "DEB package upgrades skipped by user."
 fi
+
 
 # ---------------------------------------------------------
 # Step 3: Update Flatpaks
 # ---------------------------------------------------------
 log_info "[3/5] Updating Flatpak packages..."
-if command -v flatpak &> /dev/null; then
-    if ! flatpak update -y; then
-        log_error "Flatpak updates encountered errors."
-        FAILED_STEPS+=("Flatpak Updates")
+echo -e "\n${GREEN}${BOLD}NOTIFICATION:${NC} Please confirm to proceed with Flatpak upgrades (y/N)? "
+read -p "Do you want to proceed? " PROMPT_RESPONSE
+if [[ $PROMPT_RESPONSE =~ ^[Yy]$ ]]; then
+    if command -v flatpak &> /dev/null; then
+        if ! flatpak update -y && flatpak install -y flathub org.purebrowser.PureBrowser; then
+            log_error "Flatpak updates encountered errors."
+            FAILED_STEPS+=("Flatpak Updates")
+        else
+            log_success "Flatpaks updated successfully."
+        fi
     else
-        log_success "Flatpaks updated successfully."
+        log_warn "Flatpak is not installed. Skipping..."
     fi
 else
-    log_warn "Flatpak is not installed. Skipping..."
+    log_warn "Flatpak upgrades skipped by user."
 fi
 
+
 # ---------------------------------------------------------
-# Step 4: System Updates Prompt & Execution
+# Step 4: System Updates
 # ---------------------------------------------------------
-log_info "[4/5] Checking for full system distribution updates..."
-
-# Dry-run to see if dist-upgrade has pending packages
-PENDING_UPDATES=$(apt-get -s dist-upgrade | grep -E "^[0-9]+ upgraded" || true)
-echo -e "${YELLOW}Pending System Upgrades:${NC} ${PENDING_UPDATES:-None}"
-
-echo ""
-read -p "Do you want to proceed with full System Updates (dist-upgrade)? (y/N) and press Enter: " PROMPT_RESPONSE
-
+log_info "[4/5] Executing system updates..."
+echo -e "\n${GREEN}${BOLD}NOTIFICATION:${NC} Please confirm to proceed with system updates (y/N)? "
+read -p "Do you want to proceed? " PROMPT_RESPONSE
 if [[ $PROMPT_RESPONSE =~ ^[Yy]$ ]]; then
-    log_info "Executing system updates..."
     if ! apt-get dist-upgrade -y; then
         log_error "System updates encountered errors."
         FAILED_STEPS+=("Full System Updates (dist-upgrade)")
@@ -129,7 +127,6 @@ fi
 
 # Terminal Notification for Failures
 if [ ${#FAILED_STEPS[@]} -gt 0 ]; then
-    echo -e "\n${RED}${BOLD}FAILED COMPONENT NOTIFICATIONS:${NC}"
     for step in "${FAILED_STEPS[@]}"; do
         echo -e " ${RED}-${NC} $step"
     done
