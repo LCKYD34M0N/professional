@@ -183,3 +183,12 @@ if [ ${#FAILED_STEPS[@]} -eq 0 ]; then
 else
     echo -e "${YELLOW}████████████████░░░░░░░░░░░░░░${NC}] COMP"
 fi
+
+# Reboot Status Report
+if [ "$REBOOT_NEEDED" = true ]; then
+    echo -e "\n${YELLOW}${BOLD}REBOOT STATUS:${NC} A system reboot IS required to apply kernel or core library updates."
+else
+    echo -e "\n${GREEN}${BOLD}REBOOT STATUS:${NC} No reboot is required."
+fi
+
+echo -e "${BOLD}${CYAN}==============================================${NC}"
