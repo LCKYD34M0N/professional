@@ -1,3 +1,4 @@
+#THIS IS USED FOR DEBIAN SYSTEMS ONLY!!!
 #!/usr/bin/env bash
 
 # Ensure /sbin and /usr/sbin are in PATH for tools like modinfo and dkms
