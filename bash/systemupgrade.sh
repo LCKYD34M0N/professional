@@ -30,7 +30,7 @@ echo -e "${BOLD}${CYAN}==============================================${NC}"
 # ---------------------------------------------------------
 # Step 1: Update Repositories
 # ---------------------------------------------------------
-log_info "[1/5] Updating APT package repositories..."
+log_info "[1/4] Updating APT package repositories..."
 if apt-get update -y; then
     log_success "Repository lists updated successfully."
 else
@@ -39,28 +39,9 @@ else
 fi
 
 # ---------------------------------------------------------
-# Step 2: Update DEB Packages
+# Step 2: Update Flatpaks
 # ---------------------------------------------------------
-log_info "[2/5] Upgrading installed DEB packages..."
-echo -e "\n${GREEN}${BOLD}NOTIFICATION:${NC} Please confirm to proceed with DEB package upgrades (y/N)? "
-read -p "Do you want to proceed? " PROMPT_RESPONSE
-if [[ $PROMPT_RESPONSE =~ ^[Yy]$ ]]; then
-    log_info "Executing DEB package upgrades..."
-    if ! apt-get upgrade --with-new-pkgs -y; then
-        log_error "DEB package upgrades encountered errors."
-        FAILED_STEPS+=("DEB Package Upgrades")
-    else
-        log_success "DEB packages upgraded."
-    fi
-else
-    log_warn "DEB package upgrades skipped by user."
-fi
-
-
-# ---------------------------------------------------------
-# Step 3: Update Flatpaks
-# ---------------------------------------------------------
-log_info "[3/5] Updating Flatpak packages..."
+log_info "[2/4] Updating Flatpak packages..."
 echo -e "\n${GREEN}${BOLD}NOTIFICATION:${NC} Please confirm to proceed with Flatpak upgrades (y/N)? "
 read -p "Do you want to proceed? " PROMPT_RESPONSE
 if [[ $PROMPT_RESPONSE =~ ^[Yy]$ ]]; then
@@ -80,9 +61,9 @@ fi
 
 
 # ---------------------------------------------------------
-# Step 4: System Updates
+# Step 3: System Updates
 # ---------------------------------------------------------
-log_info "[4/5] Executing system updates..."
+log_info "[3/4] Executing system updates..."
 echo -e "\n${GREEN}${BOLD}NOTIFICATION:${NC} Please confirm to proceed with system updates (y/N)? "
 read -p "Do you want to proceed? " PROMPT_RESPONSE
 if [[ $PROMPT_RESPONSE =~ ^[Yy]$ ]]; then
@@ -101,9 +82,9 @@ else
 fi
 
 # ---------------------------------------------------------
-# Step 5: Check for Reboot Requirement
+# Step 4: Check for Reboot Requirement
 # ---------------------------------------------------------
-log_info "[5/5] Checking system reboot state..."
+log_info "[4/4] Checking system reboot state..."
 REBOOT_NEEDED=false
 if [ -f /var/run/reboot-required ]; then
     REBOOT_NEEDED=true
