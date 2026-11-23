@@ -30,7 +30,7 @@ echo -e "${BOLD}${CYAN}==============================================${NC}"
 # ---------------------------------------------------------
 # Step 1: Update Repositories
 # ---------------------------------------------------------
-log_info "[1/4] Updating APT package repositories..."
+log_info "[1/5] Updating APT package repositories..."
 if apt-get update -y; then
     log_success "Repository lists updated successfully."
 else
@@ -41,11 +41,13 @@ fi
 # ---------------------------------------------------------
 # Step 2: Update Flatpaks
 # ---------------------------------------------------------
-log_info "[2/4] Updating Flatpak packages..."
-echo -e "\n${GREEN}${BOLD}NOTIFICATION:${NC} Please confirm to proceed with Flatpak upgrades (y/N)? "
-read -p "Do you want to proceed? " PROMPT_RESPONSE
-if [[ $PROMPT_RESPONSE =~ ^[Yy]$ ]]; then
-    if command -v flatpak &> /dev/null; then
+log_info "[2/5] Checking Flatpak updates..."
+if command -v flatpak &> /dev/null; then
+    echo -e "\n${BOLD}Available Flatpak Updates:${NC}"
+    flatpak remote-updates --columns=application,name,version
+    echo ""
+    read -p "Do you want to proceed with Flatpak upgrades (y/N)? " PROMPT_RESPONSE
+    if [[ $PROMPT_RESPONSE =~ ^[Yy]$ ]]; then
         if ! flatpak update -y && flatpak install -y flathub org.purebrowser.PureBrowser; then
             log_error "Flatpak updates encountered errors."
             FAILED_STEPS+=("Flatpak Updates")
@@ -53,19 +55,20 @@ if [[ $PROMPT_RESPONSE =~ ^[Yy]$ ]]; then
             log_success "Flatpaks updated successfully."
         fi
     else
-        log_warn "Flatpak is not installed. Skipping..."
+        log_warn "Flatpak upgrades skipped by user."
     fi
 else
-    log_warn "Flatpak upgrades skipped by user."
+    log_warn "Flatpak is not installed. Skipping..."
 fi
-
 
 # ---------------------------------------------------------
 # Step 3: System Updates
 # ---------------------------------------------------------
-log_info "[3/4] Executing system updates..."
-echo -e "\n${GREEN}${BOLD}NOTIFICATION:${NC} Please confirm to proceed with system updates (y/N)? "
-read -p "Do you want to proceed? " PROMPT_RESPONSE
+log_info "[3/5] Checking system updates..."
+echo -e "\n${BOLD}Available System Upgrades:${NC}"
+apt list --upgradable
+echo ""
+read -p "Do you want to proceed with system updates (y/N)? " PROMPT_RESPONSE
 if [[ $PROMPT_RESPONSE =~ ^[Yy]$ ]]; then
     if ! apt-get dist-upgrade -y; then
         log_error "System updates encountered errors."
@@ -82,9 +85,45 @@ else
 fi
 
 # ---------------------------------------------------------
-# Step 4: Check for Reboot Requirement
+# Step 4: Verify & Repair NVIDIA / DKMS Modules
 # ---------------------------------------------------------
-log_info "[4/4] Checking system reboot state..."
+log_info "[4/5] Checking NVIDIA driver and kernel module health..."
+if dpkg -l | grep -q nvidia-driver; then
+    CURRENT_KERNEL=$(uname -r)
+    log_info "Active kernel: $CURRENT_KERNEL"
+    
+    # Check if the nvidia module is built/available for the current kernel
+    if ! modinfo -k "$CURRENT_KERNEL" nvidia &> /dev/null; then
+        log_warn "NVIDIA kernel module missing for $CURRENT_KERNEL! Attempting automatic rebuild..."
+        
+        # Ensure kernel headers are present
+        apt-get install -y linux-headers-$(uname -r | sed 's/[^-]*-[^-]*-//') linux-headers-amd64
+        
+        # Trigger DKMS re-trigger or module reconfigure
+        if dpkg -l | grep -q nvidia-dkms; then
+            dpkg-reconfigure nvidia-dkms
+        else
+            dkms autoinstall
+        fi
+        
+        # Verify again
+        if modinfo -k "$CURRENT_KERNEL" nvidia &> /dev/null; then
+            log_success "NVIDIA driver successfully rebuilt and signed for $CURRENT_KERNEL."
+        else
+            log_error "NVIDIA driver module rebuild failed."
+            FAILED_STEPS+=("NVIDIA Driver Rebuild")
+        fi
+    else
+        log_success "NVIDIA driver module is present and valid for the current kernel."
+    fi
+else
+    log_info "NVIDIA drivers not detected on this system. Skipping check."
+fi
+
+# ---------------------------------------------------------
+# Step 5: Check for Reboot Requirement
+# ---------------------------------------------------------
+log_info "[5/5] Checking system reboot state..."
 REBOOT_NEEDED=false
 if [ -f /var/run/reboot-required ]; then
     REBOOT_NEEDED=true
