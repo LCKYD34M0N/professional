@@ -182,3 +182,4 @@ if [ ${#FAILED_STEPS[@]} -eq 0 ]; then
     echo -e "${GREEN}██████████████████████████████${NC}] 100% SUCCESS"
 else
     echo -e "${YELLOW}████████████████░░░░░░░░░░░░░░${NC}] COMP"
+fi
